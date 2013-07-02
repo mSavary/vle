@@ -33,8 +33,16 @@
 #include <vle/manager/Simulation.hpp>
 #include <boost/timer.hpp>
 #include <boost/progress.hpp>
+#include <iostream>
+#include <boost/thread.hpp>
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread.hpp>
 
 namespace vle { namespace manager {
+
+
 
 struct Simulation::Pimpl
 {
@@ -214,6 +222,84 @@ public:
 
 };
 
+
+
+class Simulation::Timeout
+{
+  bool 					success_;
+  boost::asio::io_service 		io_service_;
+  boost::asio::deadline_timer          	timer_;
+  vpz::Vpz 		               *vpz_;
+  const utils::ModuleManager           &modulemgr_;
+  Error 			       *error_ ;
+  value::Map           		       *result_;
+  Simulation::Pimpl 		       *mPimpl_;
+
+   void stop()
+    {
+      if(!success_){
+	std::cout<<"Timeout Reached !\n";
+	result_ = NULL;
+	io_service_.stop();
+      } else {
+	std::cout<<"Simulation Success !\n";
+      }
+    }
+
+    void work ()
+    {
+        if (mPimpl_->m_logoptions != manager::LOG_NONE) {
+            if ((mPimpl_->m_logoptions & manager::LOG_RUN) and mPimpl_->m_out) {
+                result_ = mPimpl_->runVerboseRun(vpz_, modulemgr_, error_);
+            } else {
+                result_ = mPimpl_->runVerboseSummary(vpz_, modulemgr_, error_);
+            }
+
+        } else {
+            result_ = mPimpl_->runQuiet(vpz_, modulemgr_, error_);
+        }
+
+        if (mPimpl_->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
+            result_=NULL;
+        }
+    	success_ = true;
+    	timer_.cancel();
+    }
+
+  public:
+        Timeout	(int 				timeout,
+		 vpz::Vpz                	*vpz,
+		 const utils::ModuleManager 	&modulemgr,
+		 Error                      	*error,
+		 Simulation::Pimpl 		*mPimpl)
+            : success_(false),
+              timer_( io_service_, boost::posix_time::milliseconds( timeout ) ),
+              vpz_(vpz),
+              modulemgr_(modulemgr),
+              error_(error),
+              result_(NULL),
+              mPimpl_(mPimpl)
+        {
+        }
+
+        ~Timeout()
+        {
+        }
+
+        void start()
+        {
+        	timer_.async_wait(boost::bind(&Timeout::stop, this));
+        	boost::thread thread_(&Timeout::work, this);
+        	io_service_.run();
+        }
+
+        value::Map * getResult()
+        {
+        	return result_;
+        }
+
+};
+
 Simulation::Simulation(LogOptions         logoptions,
                        SimulationOptions  simulationoptionts,
                        std::ostream      *output)
@@ -228,28 +314,34 @@ Simulation::~Simulation()
 
 value::Map * Simulation::run(vpz::Vpz                   *vpz,
                              const utils::ModuleManager &modulemgr,
-                             Error                      *error)
+                             Error                      *error,
+                             int 			*timeout)
 {
-    error->code = 0;
+    error->code 	   = 0;
     value::Map *result = NULL;
+    if (*timeout==-1){
+      if (mPimpl->m_logoptions != manager::LOG_NONE) {
+	if (mPimpl->m_logoptions & manager::LOG_RUN and mPimpl->m_out) {
+	  result = mPimpl->runVerboseRun(vpz, modulemgr, error);
+	} else {
+	  result = mPimpl->runVerboseSummary(vpz, modulemgr, error);
+	}
 
-    if (mPimpl->m_logoptions != manager::LOG_NONE) {
-        if (mPimpl->m_logoptions & manager::LOG_RUN and mPimpl->m_out) {
-            result = mPimpl->runVerboseRun(vpz, modulemgr, error);
-        } else {
-            result = mPimpl->runVerboseSummary(vpz, modulemgr, error);
-        }
+      } else {
+	result = mPimpl->runQuiet(vpz, modulemgr, error);
+      }
 
+      if (mPimpl->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
+	delete result;
+	return NULL;
+      } else {
+	return result;
+      }
     } else {
-        result = mPimpl->runQuiet(vpz, modulemgr, error);
-    }
-
-    if (mPimpl->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
-        delete result;
-        return NULL;
-    } else {
-        return result;
-    }
+      Simulation::Timeout timer(*timeout,vpz,modulemgr,error,mPimpl);
+      timer.start();
+      result = timer.getResult();
+      return result;
+      }
 }
-
 }}
