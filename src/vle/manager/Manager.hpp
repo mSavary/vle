@@ -82,8 +82,6 @@ public:
                         uint32_t              world,
                         Error                *error,
                         int				     *timeout);
-
-
 private:
     Manager(const Manager& other);
     Manager& operator=(const Manager& other);

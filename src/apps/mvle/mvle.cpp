@@ -155,7 +155,6 @@ bool mvle_mpi_init(int *argc, char ***argv, uint32_t *rank, uint32_t *world)
 
     return result;
 }
-
 bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int *timeout,
         vle::utils::Package& pack)
 {
