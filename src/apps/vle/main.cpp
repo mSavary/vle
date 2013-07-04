@@ -238,7 +238,7 @@ static vle::manager::LogOptions convert_log_mode()
 }
 
 static int run_manager(CmdArgs::const_iterator it, CmdArgs::const_iterator end,
-        int processor, vle::utils::Package& pkg)
+        int processor, vle::utils::Package& pkg, int& timeout)
 {
     vle::manager::Manager man(convert_log_mode(),
                               vle::manager::SIMULATION_NONE |
@@ -251,11 +251,12 @@ static int run_manager(CmdArgs::const_iterator it, CmdArgs::const_iterator end,
         vle::manager::Error error;
         vle::value::Matrix *res = man.run(new vle::vpz::Vpz(
                                                search_vpz(*it, pkg)),
-                modules,
-                processor,
-                0,
-                1,
-                &error);
+                						modules,
+                						processor,
+                						0,
+                						1,
+                						&error,
+                						&timeout);
 
         if (error.code) {
             std::cerr << vle::fmt(_("Experimental frames `%s' throws error %s"))
@@ -271,7 +272,7 @@ static int run_manager(CmdArgs::const_iterator it, CmdArgs::const_iterator end,
 }
 
 static int run_simulation(CmdArgs::const_iterator it,
-        CmdArgs::const_iterator end, vle::utils::Package& pkg)
+        CmdArgs::const_iterator end, vle::utils::Package& pkg, int timeout)
 {
     vle::manager::Simulation sim(convert_log_mode(),
                                  vle::manager::SIMULATION_NONE |
@@ -284,7 +285,8 @@ static int run_simulation(CmdArgs::const_iterator it,
         vle::manager::Error error;
         vle::value::Map *res = sim.run(new vle::vpz::Vpz(search_vpz(*it, pkg)),
                                        modules,
-                                       &error);
+                                       &error,
+                                       &timeout);
 
         if (error.code) {
             std::cerr << vle::fmt(_("Simulator `%s' throws error %s")) %
@@ -317,7 +319,7 @@ static bool init_package(vle::utils::Package& pkg, const CmdArgs &args)
 }
 
 static int manage_package_mode(const std::string &packagename, bool manager,
-                               int processor, const CmdArgs &args)
+                               int processor, const CmdArgs &args, int timeout)
 {
     CmdArgs::const_iterator it = args.begin();
     CmdArgs::const_iterator end = args.end();
@@ -397,9 +399,9 @@ static int manage_package_mode(const std::string &packagename, bool manager,
         vle::value::Value::deallocated = 0;
 #endif
         if (manager)
-            ret = run_manager(it, end, processor, pkg);
+            ret = run_manager(it, end, processor, pkg, timeout);
         else
-            ret = run_simulation(it, end, pkg);
+            ret = run_simulation(it, end, pkg,timeout);
 
 #ifndef NDEBUG
         std::cerr << vle::fmt(_("\n - Debug mode:\n"
@@ -483,22 +485,23 @@ static int manage_config_mode(const std::string &configvar, const CmdArgs &args)
     return ret;
 }
 
+
 enum ProgramOptionsCode
 {
     PROGRAM_OPTIONS_FAILURE = -1,
     PROGRAM_OPTIONS_END = 0,
     PROGRAM_OPTIONS_PACKAGE = 1,
     PROGRAM_OPTIONS_REMOTE = 2,
-    PROGRAM_OPTIONS_CONFIG = 3,
+    PROGRAM_OPTIONS_CONFIG = 3
 };
 
 struct ProgramOptions
 {
-    ProgramOptions(int *verbose, int *trace, int *processor,
+    ProgramOptions(int *verbose, int *trace, int *processor, int *timeout,
             bool *manager_mode, std::string *packagename,
             std::string *remotecmd, std::string *configvar, CmdArgs *args)
         : generic(_("Allowed options")), hidden(_("Hidden options")),
-        verbose(verbose), trace(trace), processor(processor),
+        verbose(verbose), trace(trace), processor(processor),timeout(timeout),
         manager_mode(manager_mode), packagename(packagename),
         remotecmd(remotecmd), configvar(configvar), args(args)
     {
@@ -548,6 +551,8 @@ struct ProgramOptions
                 " `variable'\n"
                 "vle -C vle.author me\n"
                 "vle -C gvle.editor.font Monospace 10"))
+            ("timeout,t", po::value < int >(timeout)->default_value(-1),
+             _("Select time out for simulation in ms"))
             ;
 
         hidden.add_options()
@@ -606,6 +611,10 @@ struct ProgramOptions
 
             if (vm.count("config"))
                 return PROGRAM_OPTIONS_CONFIG;
+
+            if(vm.count("timeout"))
+            	*timeout = vm["timeout"].as < int >();
+
         } catch (const std::exception &e) {
             std::cerr << e.what() << std::endl;
 
@@ -620,7 +629,7 @@ struct ProgramOptions
 
     po::options_description desc, generic, hidden;
     po::variables_map vm;
-    int *verbose, *trace, *processor;
+    int *verbose, *trace, *processor, *timeout;
     bool *manager_mode;
     std::string *packagename, *remotecmd, *configvar;
     CmdArgs *args;
@@ -628,16 +637,18 @@ struct ProgramOptions
 
 int main(int argc, char *argv[])
 {
-    int ret;
+
+	int ret;
     int verbose = 0;
     int processor = 1;
     int trace = -1; /* < 0 = stderr, 0 = file and > 0 = stdout */
+    int timeout = 0;
     bool manager_mode = false;
     std::string packagename, remotecmd, configvar;
     CmdArgs args;
 
     {
-        ProgramOptions prgs(&verbose, &trace, &processor, &manager_mode,
+        ProgramOptions prgs(&verbose, &trace, &processor, &timeout, &manager_mode,
                 &packagename, &remotecmd, &configvar, &args);
 
         ret = prgs.run(argc, argv);
@@ -654,7 +665,7 @@ int main(int argc, char *argv[])
     switch (ret) {
     case PROGRAM_OPTIONS_PACKAGE:
         return manage_package_mode(packagename, manager_mode, processor,
-                args);
+                args, timeout);
     case PROGRAM_OPTIONS_REMOTE:
         return manage_remote_mode(remotecmd, args);
     case PROGRAM_OPTIONS_CONFIG:

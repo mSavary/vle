@@ -157,7 +157,7 @@ bool mvle_mpi_init(int *argc, char ***argv, uint32_t *rank, uint32_t *world)
     return result;
 }
 
-bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show,
+bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int *timeout,
         vle::utils::Package& pack)
 {
     int i = 1;
@@ -177,6 +177,9 @@ bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show,
         } else if (std::strcmp(argv[i], "-s") == 0 or
                    std::strcmp(argv[i], "--show") == 0) {
             *show = true;
+        } else if (std::strcmp(argv[i], "--timeout") == 0 or
+        		   std::strcmp(argv[i], "-t") == 0){
+        	*timeout = atoi(argv[i+1]);
         } else {
             *vpz = i;
         }
@@ -231,6 +234,7 @@ int main(int argc, char **argv)
     uint32_t rank = 0;
     uint32_t world = 0;
     bool show = false;
+    int timeout = 0;
     bool result;
 
     vle::Init app;
@@ -238,7 +242,7 @@ int main(int argc, char **argv)
     if ((result = mvle_mpi_init(&argc, &argv, &rank, &world))) {
         int vpz;
         vle::utils::Package pack;
-        if ((result = mvle_parse_arg(argc, argv, &vpz, &show, pack))) {
+        if ((result = mvle_parse_arg(argc, argv, &vpz, &show, &timeout, pack))) {
             if (show) {
                 while (vpz < argc) {
                     mvle_show(
@@ -264,7 +268,8 @@ int main(int argc, char **argv)
                             1,
                             rank,
                             world,
-                            &error);
+                            &error,
+                            &timeout);
 
                         if (error.code) {
                             mvle_print_error("Experimental frames `%s' throws error %s",

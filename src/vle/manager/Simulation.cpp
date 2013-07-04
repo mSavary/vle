@@ -33,6 +33,12 @@
 #include <vle/manager/Simulation.hpp>
 #include <boost/timer.hpp>
 #include <boost/progress.hpp>
+#include <iostream>
+#include <boost/thread.hpp>
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread.hpp>
 
 namespace vle { namespace manager {
 
@@ -41,6 +47,7 @@ struct Simulation::Pimpl
     std::ostream      *m_out;
     LogOptions         m_logoptions;
     SimulationOptions  m_simulationoptions;
+    class     		   Timeout;
 
 public:
     Pimpl(LogOptions         logoptions,
@@ -185,6 +192,18 @@ public:
         return result;
     }
 
+//    //ICI value::map *RunquietSpawn qui lance une simulation avec utils::Spawn pour lancer un processus qui fait tourné une simu vle -P xxx yyy.vpz
+//
+//    value::Map * runQuietSpawn(vpz::Vpz                   *vpz,
+//    						   const utils::ModuleManager &modulemgr,
+//    						   Error                      *error)
+//    {
+//    	value::Map *result = 0;
+//    	//voir pour lancer un objet spawn qui permet d'executer vle -P xxx yyy.vpz
+//    	utils::Spawn runspawn("vle -P",vpz->depends(),vpz->filename());
+//    	return result;
+//    }
+
     value::Map * runQuiet(vpz::Vpz                   *vpz,
                           const utils::ModuleManager &modulemgr,
                           Error                      *error)
@@ -211,7 +230,81 @@ public:
 
         return result;
     }
+    class Timeout
+    {
+      	bool 							m_success;
+      	boost::asio::io_service 		m_io_service;
+      	boost::asio::deadline_timer 	m_timer;
+      	vpz::Vpz 					   *m_vpz;
+      	const utils::ModuleManager     &m_modulemgr;
+      	Error 						   *m_error;
+      	value::Map           		   *m_result;
+      	Simulation::Pimpl    		   *m_Pimpl;
 
+       void stop()
+        {
+    	   if(!m_success)
+    	   {
+    		   std::cout<<"Timeout\n";
+    		   m_result = NULL;
+    		   m_io_service.stop();
+    	   } else {
+    		   std::cout<<"Success\n";
+    	   }
+        }
+
+        void work ()
+        {
+        	if (m_Pimpl->m_logoptions != manager::LOG_NONE) {
+                if ((m_Pimpl->m_logoptions & manager::LOG_RUN) and m_Pimpl->m_out) {
+                	m_result = m_Pimpl->runVerboseRun(m_vpz, m_modulemgr, m_error);
+                } else {
+                	m_result = m_Pimpl->runVerboseSummary(m_vpz, m_modulemgr, m_error);
+                }
+
+            } else {
+            	m_result = m_Pimpl->runQuiet(m_vpz, m_modulemgr, m_error);
+            }
+
+            if (m_Pimpl->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
+            	m_result=NULL;
+            }
+            m_success = true;
+            m_timer.cancel();
+        }
+
+      public:
+            Timeout	(int 				  		timeout,
+            		vpz::Vpz                	*vpz,
+            		const utils::ModuleManager 	&modulemgr,
+            		Error                      	*error,
+            		Simulation::Pimpl    	 	*mPimpl)
+                : m_success(false),
+                  m_timer( m_io_service, boost::posix_time::milliseconds( timeout)),
+                  m_vpz(vpz),
+                  m_modulemgr(modulemgr),
+                  m_error(error),
+                  m_result(NULL),
+                  m_Pimpl(mPimpl)
+            {
+            }
+
+            ~Timeout()
+            {
+            }
+
+            void start()
+            {
+            	m_timer.async_wait(boost::bind(&Timeout::stop, this));
+            	boost::thread thread_(&Timeout::work, this);
+            	m_io_service.run();
+            }
+
+            value::Map * getResult()
+            {
+            	return m_result;
+            }
+    };
 };
 
 Simulation::Simulation(LogOptions         logoptions,
@@ -228,28 +321,35 @@ Simulation::~Simulation()
 
 value::Map * Simulation::run(vpz::Vpz                   *vpz,
                              const utils::ModuleManager &modulemgr,
-                             Error                      *error)
+                             Error                      *error,
+                             int 						*timeout)
 {
-    error->code = 0;
+    error->code 	   = 0;
     value::Map *result = NULL;
 
-    if (mPimpl->m_logoptions != manager::LOG_NONE) {
-        if (mPimpl->m_logoptions & manager::LOG_RUN and mPimpl->m_out) {
-            result = mPimpl->runVerboseRun(vpz, modulemgr, error);
-        } else {
-            result = mPimpl->runVerboseSummary(vpz, modulemgr, error);
-        }
-
+    if(*timeout >= 0){
+		Pimpl::Timeout timer(*timeout, vpz, modulemgr, error, mPimpl);
+		timer.start();
+		result = timer.getResult();
+		return result;
     } else {
-        result = mPimpl->runQuiet(vpz, modulemgr, error);
-    }
+    	if (mPimpl->m_logoptions != manager::LOG_NONE) {
+    		if (mPimpl->m_logoptions & manager::LOG_RUN and mPimpl->m_out) {
+    			result = mPimpl->runVerboseRun(vpz, modulemgr, error);
+    		} else {
+    			result = mPimpl->runVerboseSummary(vpz, modulemgr, error);
+    		}
 
-    if (mPimpl->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
-        delete result;
-        return NULL;
-    } else {
-        return result;
+    	} else {
+    		result = mPimpl->runQuiet(vpz, modulemgr, error);
+    	}
+
+    	if (mPimpl->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
+    		delete result;
+    		return NULL;
+    	} else {
+    		return result;
+    	}
     }
 }
-
 }}

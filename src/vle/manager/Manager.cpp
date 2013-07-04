@@ -120,6 +120,7 @@ struct Manager::Pimpl
         uint32_t              threads;
         value::Matrix        *result;
         Error                *error;
+        int					 *timeout;
 
         worker(const vpz::Vpz        *vpz,
                ExperimentGenerator&   expgen,
@@ -129,10 +130,11 @@ struct Manager::Pimpl
                uint32_t               index,
                uint32_t               threads,
                value::Matrix         *result,
-               Error                 *error)
+               Error                 *error,
+               int				     *timeout)
             : vpz(vpz), expgen(expgen), modulemgr(modulemgr),
               mLogOption(logoptions), mSimulationOption(simulationoptions),
-              index(index), threads(threads), result(result), error(error)
+              index(index), threads(threads), result(result), error(error), timeout(timeout)
         {
         }
 
@@ -152,7 +154,7 @@ struct Manager::Pimpl
                 setExperimentName(file, vpzname, i);
                 expgen.get(i, &file->project().experiment().conditions());
 
-                value::Map *simresult = sim.run(file, modulemgr, &err);
+                value::Map *simresult = sim.run(file, modulemgr, &err, timeout);
 
                 if (err.code) {
                     // writeRunLog(err.message);
@@ -168,12 +170,13 @@ struct Manager::Pimpl
         }
     };
 
-    value::Matrix * runManagerThread(vpz::Vpz              *vpz,
+    value::Matrix * runManagerThread(vpz::Vpz  	        	*vpz,
                                      utils::ModuleManager&  modulemgr,
                                      uint32_t               threads,
                                      uint32_t               rank,
                                      uint32_t               world,
-                                     Error                 *error)
+                                     Error                 	*error,
+                                     int 					*timeout)
     {
         ExperimentGenerator expgen(*vpz, rank, world);
         std::string vpzname(vpz->project().experiment().name());
@@ -183,7 +186,7 @@ struct Manager::Pimpl
         for (uint32_t i = 0; i < threads; ++i) {
             gp.create_thread(worker(vpz, expgen, modulemgr,
                                     mLogOption, mSimulationOption,
-                                    i, threads, result, error));
+                                    i, threads, result, error, timeout));
         }
 
         gp.join_all();
@@ -198,7 +201,8 @@ struct Manager::Pimpl
                                    utils::ModuleManager &modulemgr,
                                    uint32_t              rank,
                                    uint32_t              world,
-                                   Error                *error)
+                                   Error                *error,
+                                   int		    		*timeout)
     {
         Simulation sim(mLogOption, mSimulationOption, NULL);
         ExperimentGenerator expgen(*vpz, rank, world);
@@ -215,7 +219,7 @@ struct Manager::Pimpl
                 setExperimentName(file, vpzname, i);
                 expgen.get(i, &file->project().experiment().conditions());
 
-                sim.run(file, modulemgr, &err);
+                sim.run(file, modulemgr, &err, timeout);
 
                 if (err.code) {
                     writeRunLog(err.message);
@@ -235,7 +239,7 @@ struct Manager::Pimpl
                 setExperimentName(file, vpzname, i);
                 expgen.get(i, &file->project().experiment().conditions());
 
-                value::Map *simresult = sim.run(file, modulemgr, &err);
+                value::Map *simresult = sim.run(file, modulemgr, &err, timeout);
 
                 if (err.code) {
                     writeRunLog(err.message);
@@ -280,7 +284,9 @@ value::Matrix * Manager::run(vpz::Vpz             *exp,
                              uint32_t              thread,
                              uint32_t              rank,
                              uint32_t              world,
-                             Error                *error)
+                             Error                *error,
+                             int			      *timeout)
+
 {
     value::Matrix *result = 0;
 
@@ -306,9 +312,9 @@ value::Matrix * Manager::run(vpz::Vpz             *exp,
 
     if (thread > 1) {
         result = mPimpl->runManagerThread(exp, modulemgr, thread, rank,
-                                          world, error);
+                                          world, error, timeout);
     } else {
-        result = mPimpl->runManagerMono(exp, modulemgr, rank, world, error);
+        result = mPimpl->runManagerMono(exp, modulemgr, rank, world, error, timeout);
     }
 
     mPimpl->writeSummaryLog(_("Manager ended"));
