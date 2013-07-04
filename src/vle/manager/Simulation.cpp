@@ -192,18 +192,6 @@ public:
         return result;
     }
 
-//    //ICI value::map *RunquietSpawn qui lance une simulation avec utils::Spawn pour lancer un processus qui fait tourné une simu vle -P xxx yyy.vpz
-//
-//    value::Map * runQuietSpawn(vpz::Vpz                   *vpz,
-//    						   const utils::ModuleManager &modulemgr,
-//    						   Error                      *error)
-//    {
-//    	value::Map *result = 0;
-//    	//voir pour lancer un objet spawn qui permet d'executer vle -P xxx yyy.vpz
-//    	utils::Spawn runspawn("vle -P",vpz->depends(),vpz->filename());
-//    	return result;
-//    }
-
     value::Map * runQuiet(vpz::Vpz                   *vpz,
                           const utils::ModuleManager &modulemgr,
                           Error                      *error)

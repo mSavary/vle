@@ -552,7 +552,7 @@ struct ProgramOptions
                 "vle -C vle.author me\n"
                 "vle -C gvle.editor.font Monospace 10"))
             ("timeout,t", po::value < int >(timeout)->default_value(-1),
-             _("Select time out for simulation in ms"))
+             _("Select time out for simulation in milliseconds"))
             ;
 
         hidden.add_options()
@@ -637,7 +637,6 @@ struct ProgramOptions
 
 int main(int argc, char *argv[])
 {
-
 	int ret;
     int verbose = 0;
     int processor = 1;
@@ -646,7 +645,6 @@ int main(int argc, char *argv[])
     bool manager_mode = false;
     std::string packagename, remotecmd, configvar;
     CmdArgs args;
-
     {
         ProgramOptions prgs(&verbose, &trace, &processor, &timeout, &manager_mode,
                 &packagename, &remotecmd, &configvar, &args);
@@ -670,6 +668,7 @@ int main(int argc, char *argv[])
         return manage_remote_mode(remotecmd, args);
     case PROGRAM_OPTIONS_CONFIG:
         return manage_config_mode(configvar, args);
+
     default:
         break;
     };

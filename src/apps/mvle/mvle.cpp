@@ -40,7 +40,6 @@
 
 #define OMPI_SKIP_MPICXX
 #include <mpi.h>
-
 void mvle_show_help()
 {
     std::fprintf(stderr, _(
@@ -270,7 +269,6 @@ int main(int argc, char **argv)
                             world,
                             &error,
                             &timeout);
-
                         if (error.code) {
                             mvle_print_error("Experimental frames `%s' throws error %s",
                                              argv[vpz], error.message.c_str());
