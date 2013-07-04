@@ -218,7 +218,8 @@ public:
 
         return result;
     }
-    class Pimpl::Timeout
+
+    class Timeout
     {
       	bool 			     			m_success;
       	boost::asio::io_service     	m_io_service;
