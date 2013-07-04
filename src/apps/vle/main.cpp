@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
     int verbose = 0;
     int processor = 1;
     int trace = -1; /* < 0 = stderr, 0 = file and > 0 = stdout */
-    int timeout = 0;
+    int timeout = -1;
     bool manager_mode = false;
     std::string packagename, remotecmd, configvar;
     CmdArgs args;

@@ -120,7 +120,7 @@ struct Manager::Pimpl
         uint32_t              threads;
         value::Matrix        *result;
         Error                *error;
-        int				     *timeout;
+        int	             *timeout;
 
         worker(const vpz::Vpz        *vpz,
                ExperimentGenerator&   expgen,
@@ -131,7 +131,7 @@ struct Manager::Pimpl
                uint32_t               threads,
                value::Matrix         *result,
                Error                 *error,
-               int				     *timeout)
+               int      	     *timeout)
             : vpz(vpz), expgen(expgen), modulemgr(modulemgr),
               mLogOption(logoptions), mSimulationOption(simulationoptions),
               index(index), threads(threads), result(result), error(error), timeout(timeout)
@@ -169,13 +169,13 @@ struct Manager::Pimpl
         }
     };
 
-    value::Matrix * runManagerThread(vpz::Vpz  	        	*vpz,
+    value::Matrix * runManagerThread(vpz::Vpz               *vpz,
                                      utils::ModuleManager&  modulemgr,
                                      uint32_t               threads,
                                      uint32_t               rank,
                                      uint32_t               world,
                                      Error                  *error,
-                                     int 			  	 	*timeout)
+                                     int                    *timeout)
     {
         ExperimentGenerator expgen(*vpz, rank, world);
         std::string vpzname(vpz->project().experiment().name());
@@ -201,7 +201,7 @@ struct Manager::Pimpl
                                    uint32_t              rank,
                                    uint32_t              world,
                                    Error                *error,
-                                   int		       		*timeout)
+                                   int		       	*timeout)
     {
         Simulation sim(mLogOption, mSimulationOption, NULL);
         ExperimentGenerator expgen(*vpz, rank, world);
@@ -283,7 +283,7 @@ value::Matrix * Manager::run(vpz::Vpz             *exp,
                              uint32_t              rank,
                              uint32_t              world,
                              Error                *error,
-                             int			      *timeout)
+                             int	          *timeout)
 
 {
     value::Matrix *result = 0;

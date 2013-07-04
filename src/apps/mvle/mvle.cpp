@@ -176,8 +176,8 @@ bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int *timeout,
                    std::strcmp(argv[i], "--show") == 0) {
             *show = true;
         } else if (std::strcmp(argv[i], "--timeout") == 0 or
-        		   std::strcmp(argv[i], "-t") == 0) {
-        	*timeout = atoi(argv[i+1]);
+		   std::strcmp(argv[i], "-t") == 0) {
+	  *timeout = atoi(argv[i+1]);
         } else {
             *vpz = i;
         }
