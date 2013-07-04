@@ -401,7 +401,7 @@ static int manage_package_mode(const std::string &packagename, bool manager,
         if (manager)
             ret = run_manager(it, end, processor, pkg, timeout);
         else
-            ret = run_simulation(it, end, pkg,timeout);
+            ret = run_simulation(it, end, pkg, timeout);
 
 #ifndef NDEBUG
         std::cerr << vle::fmt(_("\n - Debug mode:\n"
@@ -501,7 +501,7 @@ struct ProgramOptions
             bool *manager_mode, std::string *packagename,
             std::string *remotecmd, std::string *configvar, CmdArgs *args)
         : generic(_("Allowed options")), hidden(_("Hidden options")),
-        verbose(verbose), trace(trace), processor(processor),timeout(timeout),
+        verbose(verbose), trace(trace), processor(processor), timeout(timeout),
         manager_mode(manager_mode), packagename(packagename),
         remotecmd(remotecmd), configvar(configvar), args(args)
     {
@@ -614,7 +614,6 @@ struct ProgramOptions
 
             if(vm.count("timeout"))
             	*timeout = vm["timeout"].as < int >();
-
         } catch (const std::exception &e) {
             std::cerr << e.what() << std::endl;
 

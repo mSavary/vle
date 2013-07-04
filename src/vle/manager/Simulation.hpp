@@ -57,7 +57,7 @@ public:
     value::Map * run(vpz::Vpz                   *vpz,
                      const utils::ModuleManager &modulemgr,
                      Error                      *error,
-                     int 		    			*timeout);
+                     int 		    		    *timeout);
 
 private:
     Simulation(const Simulation &other);

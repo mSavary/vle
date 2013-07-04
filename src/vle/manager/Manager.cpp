@@ -120,7 +120,7 @@ struct Manager::Pimpl
         uint32_t              threads;
         value::Matrix        *result;
         Error                *error;
-        int					 *timeout;
+        int				     *timeout;
 
         worker(const vpz::Vpz        *vpz,
                ExperimentGenerator&   expgen,
@@ -174,8 +174,8 @@ struct Manager::Pimpl
                                      uint32_t               threads,
                                      uint32_t               rank,
                                      uint32_t               world,
-                                     Error                 	*error,
-                                     int 					*timeout)
+                                     Error                  *error,
+                                     int 			  	 	*timeout)
     {
         ExperimentGenerator expgen(*vpz, rank, world);
         std::string vpzname(vpz->project().experiment().name());
@@ -201,7 +201,7 @@ struct Manager::Pimpl
                                    uint32_t              rank,
                                    uint32_t              world,
                                    Error                *error,
-                                   int		    		*timeout)
+                                   int		       		*timeout)
     {
         Simulation sim(mLogOption, mSimulationOption, NULL);
         ExperimentGenerator expgen(*vpz, rank, world);

@@ -218,14 +218,14 @@ public:
 
         return result;
     }
-    class Timeout
+    class Pimpl::Timeout
     {
-      	bool 							m_success;
-      	boost::asio::io_service 		m_io_service;
-      	boost::asio::deadline_timer 	m_timer;
-      	vpz::Vpz 					   *m_vpz;
+      	bool 			     			m_success;
+      	boost::asio::io_service     	m_io_service;
+      	boost::asio::deadline_timer     m_timer;
+      	vpz::Vpz 			  	       *m_vpz;
       	const utils::ModuleManager     &m_modulemgr;
-      	Error 						   *m_error;
+      	Error 					       *m_error;
       	value::Map           		   *m_result;
       	Simulation::Pimpl    		   *m_Pimpl;
 
@@ -310,7 +310,7 @@ Simulation::~Simulation()
 value::Map * Simulation::run(vpz::Vpz                   *vpz,
                              const utils::ModuleManager &modulemgr,
                              Error                      *error,
-                             int 						*timeout)
+                             int 				    	*timeout)
 {
     error->code 	   = 0;
     value::Map *result = NULL;

@@ -81,7 +81,7 @@ public:
                         uint32_t              rank,
                         uint32_t              world,
                         Error                *error,
-                        int				     *timeout);
+                        int		    	     *timeout);
 private:
     Manager(const Manager& other);
     Manager& operator=(const Manager& other);
