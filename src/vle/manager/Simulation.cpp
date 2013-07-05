@@ -219,73 +219,127 @@ public:
         return result;
     }
 
-    class Timeout
+//    class Timeout
+//    {
+//      	bool                            m_success;
+//      	boost::asio::io_service     	m_io_service;
+//      	boost::asio::deadline_timer     m_timer;
+//        vpz::Vpz          	       *m_vpz;
+//      	const utils::ModuleManager     &m_modulemgr;
+//      	Error 		               *m_error;
+//      	value::Map           	       *m_result;
+//      	Simulation::Pimpl    	       *m_Pimpl;
+//
+//       void stop()
+//        {
+//    	   //vpz::Vpz vpzfile;
+//    	   if(!m_success)
+//    	   {
+//    		   std::cout<<"Timeout\n";
+//    		   m_result = NULL;
+//    		 //  vpzfile(this->m_vpz);
+//    		   m_io_service.stop();
+//
+//    	   } else {
+//    		   std::cout<<"Success\n";
+//    	   }
+//        }
+//
+//        void work ()
+//        {
+//        	m_result = m_Pimpl->run(m_vpz, m_modulemgr, m_error);
+//            m_success = true;
+//            m_timer.cancel();
+//        }
+//
+//      public:
+//            Timeout	(int 	                        timeout,
+//            		vpz::Vpz                	*vpz,
+//            		const utils::ModuleManager 	&modulemgr,
+//            		Error                      	*error,
+//            		Simulation::Pimpl    	 	*mPimpl)
+//                : m_success(false),
+//                  m_timer( m_io_service, boost::posix_time::milliseconds(timeout)),
+//                  m_vpz(vpz),
+//                  m_modulemgr(modulemgr),
+//                  m_error(error),
+//                  m_result(NULL),
+//                  m_Pimpl(mPimpl)
+//            {
+//            }
+//
+//            ~Timeout()
+//            {
+//            }
+//
+//            void start()
+//            {
+//            	m_timer.async_wait(boost::bind(&Timeout::stop, this));
+//            	boost::thread thread_(&Timeout::work, this);
+//            	m_io_service.run();
+//            	//thread_.interrupt();
+//            }
+//
+//            value::Map * getResult()
+//            {
+//            	return m_result;
+//            }
+//    };
+
+    void work (vpz::Vpz *vpz,
+                       const utils::ModuleManager &modulemgr,
+                       Error *error,
+                       boost::asio::deadline_timer &timer,
+                       bool success,
+                       value::Map **result)
     {
-      	bool                            m_success;
-      	boost::asio::io_service     	m_io_service;
-      	boost::asio::deadline_timer     m_timer;
-        vpz::Vpz          	       *m_vpz;
-      	const utils::ModuleManager     &m_modulemgr;
-      	Error 		               *m_error;
-      	value::Map           	       *m_result;
-      	Simulation::Pimpl    	       *m_Pimpl;
+        *result = Pimpl::run(vpz, modulemgr, error);
+        success = true;
+        timer.cancel();
+    }
 
-       void stop()
+   void stop (bool success,
+                     value::Map **result,
+                     boost::asio::io_service io_service)
+     {
+        //vpz::Vpz vpzfile;
+        if(!success)
         {
-    	   //vpz::Vpz vpzfile;
-    	   if(!m_success)
-    	   {
-    		   std::cout<<"Timeout\n";
-    		   m_result = NULL;
-    		 //  vpzfile(this->m_vpz);
-    		   m_io_service.stop();
-    	   } else {
-    		   std::cout<<"Success\n";
-    	   }
+            std::cout<<"Timeout\n";
+           *result = NULL;
+          //  vpzfile(this->m_vpz);
+            io_service.stop();
+        } else {
+            std::cout<<"Success\n";
         }
+     }
 
-        void work ()
-        {
-        	m_result = m_Pimpl->run(m_vpz, m_modulemgr, m_error);
-            m_success = true;
-            m_timer.cancel();
-        }
+    value::Map * runTimeout(vpz::Vpz                   *vpz,
+                            const utils::ModuleManager &modulemgr,
+                            Error                      *error,
+                            Pimpl                      *mPimpl,
+                            int                        *time)
+    {
 
-      public:
-            Timeout	(int 	                        timeout,
-            		vpz::Vpz                	*vpz,
-            		const utils::ModuleManager 	&modulemgr,
-            		Error                      	*error,
-            		Simulation::Pimpl    	 	*mPimpl)
-                : m_success(false),
-                  m_timer( m_io_service, boost::posix_time::milliseconds(timeout)),
-                  m_vpz(vpz),
-                  m_modulemgr(modulemgr),
-                  m_error(error),
-                  m_result(NULL),
-                  m_Pimpl(mPimpl)
-            {
-            }
+//     Timeout timer(*time, vpz, modulemgr, error, mPimpl);
+//     timer.start();
+//     return timer.getResult();
+      value::Map                     **result = NULL;
+      bool                           success = false;
+      boost::asio::io_service        io_service;
+      boost::asio::deadline_timer    timer(io_service);
 
-            ~Timeout()
-            {
-            }
+      timer.expires_from_now(boost::posix_time::milliseconds(*time));
+      timer.async_wait(boost::bind(&Pimpl::stop, success, result, io_service, this));
+      boost::thread thread(&Pimpl::work, this, vpz, modulemgr, *error, timer, success, result);
+      io_service.run();
 
-            void start()
-            {
-            	m_timer.async_wait(boost::bind(&Timeout::stop, this));
-            	boost::thread thread_(&Timeout::work, this);
-            	m_io_service.run();
-            }
+      return *result;
+    }
 
-            value::Map * getResult()
-            {
-            	return m_result;
-            }
-    };
     value::Map * run(vpz::Vpz                   *vpz,
                      const utils::ModuleManager &modulemgr,
-		     Error                      *error){
+                     Error                      *error){
     	value::Map *result;
     	if (m_logoptions != manager::LOG_NONE) {
     	    if (m_logoptions & manager::LOG_RUN and m_out) {
@@ -325,13 +379,9 @@ value::Map * Simulation::run(vpz::Vpz                   *vpz,
                              int 		  	*timeout)
 {
     error->code 	   = 0;
-    value::Map *result = NULL;
 
-    if(*timeout >= 0){
-        Pimpl::Timeout timer(*timeout, vpz, modulemgr, error, mPimpl);
-		timer.start();
-		result = timer.getResult();
-		return result;
+    if (*timeout >= 0) {
+		return (mPimpl->runTimeout(vpz, modulemgr, error, mPimpl, timeout));
     } else {
     	return(mPimpl->run(vpz, modulemgr, error));
     }
