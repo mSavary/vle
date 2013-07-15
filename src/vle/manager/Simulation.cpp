@@ -68,18 +68,19 @@ public:
     }
 
     template <typename T>
-    void write(const T& t)
+   static void write(const T& t,std::ostream *output)
     {
-        if (m_out) {
-            (*m_out) << t;
+        if (output) {
+            (*output) << t;
         } else {
             utils::Trace::send(t);
         }
     }
 
-    value::Map * runVerboseRun(vpz::Vpz                   *vpz,
+    static value::Map * runVerboseRun(vpz::Vpz                   *vpz,
                                const utils::ModuleManager &modulemgr,
-                               Error                      *error)
+                               Error                      *error,
+                               std::ostream *output)
     {
         value::Map   *result = 0;
         boost::timer  timer;
@@ -90,25 +91,25 @@ public:
             const double duration = vpz->project().experiment().duration();
             const double begin    = vpz->project().experiment().begin();
 
-            write(fmt(_("[%1%]\n")) % vpz->filename());
-            write(_(" - Coordinator load models ......: "));
+            write(fmt(_("[%1%]\n")) % vpz->filename(), output);
+            write(_(" - Coordinator load models ......: "),output);
 
             root.load(*vpz);
 
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Clean project file ...........: "));
+            /*this->*/write(_(" - Clean project file ...........: "), output);
             vpz->clear();
             delete vpz;
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Coordinator initializing .....: "));
+            /*this->*/write(_(" - Coordinator initializing .....: "), output);
             root.init();
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Simulation run................: "));
+            /*this->*/write(_(" - Simulation run................: "), output);
 
-            boost::progress_display display(100, *m_out, "\n   ", "   ", "   ");
+            boost::progress_display display(100, *output, "\n   ", "   ", "   ");
             long                    previous = 0;
 
             while (root.run()) {
@@ -121,14 +122,14 @@ public:
 
             display += 100 - previous;
 
-            write(_(" - Coordinator cleaning .........: "));
+            /*this->*/write(_(" - Coordinator cleaning .........: "), output);
             root.finish();
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
             result = root.outputs();
 
-            write(fmt(_(" - Time spent in kernel .........: %1% s"))
-                  % timer.elapsed());
+            /*this->*/write(fmt(_(" - Time spent in kernel .........: %1% s"))
+                  % timer.elapsed(), output);
 
             error->code    = 0;
         } catch(const std::exception& e) {
@@ -141,45 +142,47 @@ public:
         return result;
     }
 
-    value::Map * runVerboseSummary(vpz::Vpz                   *vpz,
+    static value::Map * runVerboseSummary(vpz::Vpz                   *vpz,
                                    const utils::ModuleManager &modulemgr,
-                                   Error                      *error)
+                                   Error                      *error,
+                                   std::ostream               *output)
     {
         value::Map   *result = 0;
         boost::timer  timer;
 
+
         try {
             devs::RootCoordinator root(modulemgr);
 
-            write(fmt(_("[%1%]\n")) % vpz->filename());
-            write(_(" - Coordinator load models ......: "));
+            /*this->*/write(fmt(_("[%1%]\n")) % vpz->filename(), output);
+            /*this->*/write(_(" - Coordinator load models ......: "), output);
 
             root.load(*vpz);
 
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Clean project file ...........: "));
+            /*this->*/write(_(" - Clean project file ...........: "), output);
             vpz->clear();
             delete vpz;
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Coordinator initializing .....: "));
+            /*this->*/write(_(" - Coordinator initializing .....: "), output);
             root.init();
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Simulation run................: "));
+            /*this->*/write(_(" - Simulation run................: "), output);
 
             while (root.run());
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
-            write(_(" - Coordinator cleaning .........: "));
+            /*this->*/write(_(" - Coordinator cleaning .........: "), output);
             root.finish();
-            write(_("ok\n"));
+            /*this->*/write(_("ok\n"), output);
 
             result = root.outputs();
 
-            write(fmt(_(" - Time spent in kernel .........: %1% s"))
-                  % timer.elapsed());
+            /*this->*/write(fmt(_(" - Time spent in kernel .........: %1% s"))
+                  % timer.elapsed(), output);
 
             error->code    = 0;
         } catch(const std::exception& e) {
@@ -192,7 +195,7 @@ public:
         return result;
     }
 
-    value::Map * runQuiet(vpz::Vpz                   *vpz,
+    static value::Map * runQuiet(vpz::Vpz                   *vpz,
                           const utils::ModuleManager &modulemgr,
                           Error                      *error)
     {
@@ -219,140 +222,109 @@ public:
         return result;
     }
 
-//    class Timeout
-//    {
-//      	bool                            m_success;
-//      	boost::asio::io_service     	m_io_service;
-//      	boost::asio::deadline_timer     m_timer;
-//        vpz::Vpz          	       *m_vpz;
-//      	const utils::ModuleManager     &m_modulemgr;
-//      	Error 		               *m_error;
-//      	value::Map           	       *m_result;
-//      	Simulation::Pimpl    	       *m_Pimpl;
-//
-//       void stop()
-//        {
-//    	   //vpz::Vpz vpzfile;
-//    	   if(!m_success)
-//    	   {
-//    		   std::cout<<"Timeout\n";
-//    		   m_result = NULL;
-//    		 //  vpzfile(this->m_vpz);
-//    		   m_io_service.stop();
-//
-//    	   } else {
-//    		   std::cout<<"Success\n";
-//    	   }
-//        }
-//
-//        void work ()
-//        {
-//        	m_result = m_Pimpl->run(m_vpz, m_modulemgr, m_error);
-//            m_success = true;
-//            m_timer.cancel();
-//        }
-//
-//      public:
-//            Timeout	(int 	                        timeout,
-//            		vpz::Vpz                	*vpz,
-//            		const utils::ModuleManager 	&modulemgr,
-//            		Error                      	*error,
-//            		Simulation::Pimpl    	 	*mPimpl)
-//                : m_success(false),
-//                  m_timer( m_io_service, boost::posix_time::milliseconds(timeout)),
-//                  m_vpz(vpz),
-//                  m_modulemgr(modulemgr),
-//                  m_error(error),
-//                  m_result(NULL),
-//                  m_Pimpl(mPimpl)
-//            {
-//            }
-//
-//            ~Timeout()
-//            {
-//            }
-//
-//            void start()
-//            {
-//            	m_timer.async_wait(boost::bind(&Timeout::stop, this));
-//            	boost::thread thread_(&Timeout::work, this);
-//            	m_io_service.run();
-//            	//thread_.interrupt();
-//            }
-//
-//            value::Map * getResult()
-//            {
-//            	return m_result;
-//            }
-//    };
+    class Timeout
+       {
+          bool m_success;
+          boost::asio::io_service m_io_service;
+          boost::asio::deadline_timer m_timer;
+          vpz::Vpz *m_vpz;
+          const utils::ModuleManager &m_modulemgr;
+          Error *m_error;
+          value::Map *m_result;
+          LogOptions         m_logoptions;
+          SimulationOptions  m_simulationoptions;
+          std::ostream      *m_out;
 
-    void work (vpz::Vpz *vpz,
-                       const utils::ModuleManager &modulemgr,
-                       Error *error,
-                       boost::asio::deadline_timer &timer,
-                       bool success,
-                       value::Map **result)
-    {
-        *result = Pimpl::run(vpz, modulemgr, error);
-        success = true;
-        timer.cancel();
-    }
+          void stop()
+          {
+              if(!m_success)
+              {
+                  //vpz::Vpz error(m_vpz);
+                 // error.setFilename("ErrorFile");
 
-   void stop (bool success,
-                     value::Map **result,
-                     boost::asio::io_service io_service)
-     {
-        //vpz::Vpz vpzfile;
-        if(!success)
-        {
-            std::cout<<"Timeout\n";
-           *result = NULL;
-          //  vpzfile(this->m_vpz);
-            io_service.stop();
-        } else {
-            std::cout<<"Success\n";
-        }
-     }
+                  std::cout<<"Timeout\n";
+
+                  m_vpz->setFilename("Error");
+                //  m_vpz->fixExtension(m_vpz->filename());
+                  m_result = NULL;
+
+                  m_io_service.stop();
+              } else {
+                  std::cout<<"Success\n";
+              }
+           }
+
+           void work ()
+           {
+                Pimpl::run(m_vpz, m_modulemgr, m_error, m_logoptions, m_simulationoptions, m_out);
+                m_success = true;
+                m_timer.cancel();
+           }
+
+         public:
+               Timeout (int timeout,
+                vpz::Vpz *vpz,
+                const utils::ModuleManager &modulemgr,
+                Error *error,
+                LogOptions logOptions,
+                SimulationOptions simOptions,
+                std::ostream      *output)
+                   : m_success(false),
+                     m_timer( m_io_service, boost::posix_time::milliseconds( timeout)),
+                     m_vpz(vpz),
+                     m_modulemgr(modulemgr),
+                     m_error(error),
+                     m_result(NULL),
+                     m_logoptions(logOptions),
+                     m_simulationoptions(simOptions),
+                     m_out(output)
+               {
+                    m_timer.async_wait(boost::bind(&Timeout::stop, this));
+                    boost::thread thread_(&Timeout::work, this);
+                    m_io_service.run();
+               }
+
+               ~Timeout()
+               {
+               }
+
+               value::Map * getResult()
+               {
+                return m_result;
+               }
+       };
 
     value::Map * runTimeout(vpz::Vpz                   *vpz,
                             const utils::ModuleManager &modulemgr,
                             Error                      *error,
-                            Pimpl                      *mPimpl,
-                            int                        *time)
+                            int                        *time,
+                            LogOptions         logoptions,
+                            SimulationOptions  simulationoptions,
+                            std::ostream      *output)
     {
-
-//     Timeout timer(*time, vpz, modulemgr, error, mPimpl);
-//     timer.start();
-//     return timer.getResult();
-      value::Map                     **result = NULL;
-      bool                           success = false;
-      boost::asio::io_service        io_service;
-      boost::asio::deadline_timer    timer(io_service);
-
-      timer.expires_from_now(boost::posix_time::milliseconds(*time));
-      timer.async_wait(boost::bind(&Pimpl::stop, success, result, io_service, this));
-      boost::thread thread(&Pimpl::work, this, vpz, modulemgr, *error, timer, success, result);
-      io_service.run();
-
-      return *result;
+      Timeout timer(*time, vpz, modulemgr, error, logoptions, simulationoptions, output);
+      return (timer.getResult());
     }
 
-    value::Map * run(vpz::Vpz                   *vpz,
+   static value::Map * run(vpz::Vpz                   *vpz,
                      const utils::ModuleManager &modulemgr,
-                     Error                      *error){
+                     Error                      *error,
+                     LogOptions logOptions,
+                     SimulationOptions simOptions,
+                     std::ostream      *output){
     	value::Map *result;
-    	if (m_logoptions != manager::LOG_NONE) {
-    	    if (m_logoptions & manager::LOG_RUN and m_out) {
-    	        result = runVerboseRun(vpz, modulemgr, error);
+    	if (logOptions != manager::LOG_NONE) {
+    	    if (logOptions & manager::LOG_RUN and output) {
+    	        result = runVerboseRun(vpz, modulemgr, error, output);
     	    } else {
-    	        result = runVerboseSummary(vpz, modulemgr, error);
+    	        result = runVerboseSummary(vpz, modulemgr, error, output);
     	    }
 
     	} else {
-    	    result = this->runQuiet(vpz, modulemgr, error);
+    	    result = runQuiet(vpz, modulemgr, error);
     	}
 
-    	if (this->m_simulationoptions & manager::SIMULATION_NO_RETURN) {
+    	if (simOptions & manager::SIMULATION_NO_RETURN) {
     	    delete result;
     	    return NULL;
     	} else {
@@ -360,6 +332,7 @@ public:
     	}
     }
 };
+
 
 Simulation::Simulation(LogOptions         logoptions,
                        SimulationOptions  simulationoptionts,
@@ -381,9 +354,9 @@ value::Map * Simulation::run(vpz::Vpz                   *vpz,
     error->code 	   = 0;
 
     if (*timeout >= 0) {
-		return (mPimpl->runTimeout(vpz, modulemgr, error, mPimpl, timeout));
+        return (mPimpl->runTimeout(vpz, modulemgr, error, timeout, mPimpl->m_logoptions, mPimpl->m_simulationoptions, mPimpl->m_out));
     } else {
-    	return(mPimpl->run(vpz, modulemgr, error));
+    	return(mPimpl->run(vpz, modulemgr, error,mPimpl->m_logoptions, mPimpl->m_simulationoptions, mPimpl->m_out));
     }
 }
 }}

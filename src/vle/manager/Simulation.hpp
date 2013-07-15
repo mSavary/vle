@@ -59,10 +59,15 @@ public:
                      Error                      *error,
                      int 		    		    *timeout);
 
+    value::Map * job(vpz::Vpz                   *vpz,
+                     const utils::ModuleManager &modulemgr,
+                     Error                      *error);
+
 private:
     Simulation(const Simulation &other);
     Simulation& operator=(const Simulation &other);
     class Pimpl;
+    class Timeout;
     Pimpl *mPimpl;
 };
 
