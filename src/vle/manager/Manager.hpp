@@ -80,8 +80,33 @@ public:
                         uint32_t              thread,
                         uint32_t              rank,
                         uint32_t              world,
+                        Error                *error);
+
+    /**
+     * Run an part or a complete experimental frames with mono thread
+     * or multi-thread.
+     *
+     * @param exp
+     * @param modulemgr
+     * @param thread
+     * @param rank
+     * @param world
+     *
+     * (1, 0, 1) defines one thread for the complete experimental
+     * frame.  (4, 0, 1) defines four threads for the complete
+     * experimental frame. (1, 0, 2) defines one thread for half of
+     * the experimental frame. (4, 0, 2) defines four thread by half
+     * of experimental frame.
+     *
+     * @return A @c value::Matrix to freed.
+     */
+    value::Matrix * run(vpz::Vpz             *exp,
+                        utils::ModuleManager &modulemgr,
+                        uint32_t              thread,
+                        uint32_t              rank,
+                        uint32_t              world,
                         Error                *error,
-                        int	 	     *timeout);
+                        int	 	      timeout);
 private:
     Manager(const Manager& other);
     Manager& operator=(const Manager& other);

@@ -120,7 +120,7 @@ struct Manager::Pimpl
         uint32_t              threads;
         value::Matrix        *result;
         Error                *error;
-        int	             *timeout;
+        int	              timeout;
 
         worker(const vpz::Vpz        *vpz,
                ExperimentGenerator&   expgen,
@@ -131,10 +131,11 @@ struct Manager::Pimpl
                uint32_t               threads,
                value::Matrix         *result,
                Error                 *error,
-               int      	     *timeout)
+               int      	      timeout)
             : vpz(vpz), expgen(expgen), modulemgr(modulemgr),
               mLogOption(logoptions), mSimulationOption(simulationoptions),
-              index(index), threads(threads), result(result), error(error), timeout(timeout)
+              index(index), threads(threads), result(result), error(error),
+              timeout(timeout)
         {
         }
 
@@ -175,7 +176,7 @@ struct Manager::Pimpl
                                      uint32_t               rank,
                                      uint32_t               world,
                                      Error                  *error,
-                                     int                    *timeout)
+                                     int                     timeout)
     {
         ExperimentGenerator expgen(*vpz, rank, world);
         std::string vpzname(vpz->project().experiment().name());
@@ -201,7 +202,7 @@ struct Manager::Pimpl
                                    uint32_t              rank,
                                    uint32_t              world,
                                    Error                *error,
-                                   int		       	*timeout)
+                                   int		       	 timeout)
     {
         Simulation sim(mLogOption, mSimulationOption, NULL);
         ExperimentGenerator expgen(*vpz, rank, world);
@@ -282,9 +283,18 @@ value::Matrix * Manager::run(vpz::Vpz             *exp,
                              uint32_t              thread,
                              uint32_t              rank,
                              uint32_t              world,
-                             Error                *error,
-                             int	          *timeout)
+                             Error                *error)
+{
+    return run(exp, modulemgr, thread, rank, world, error, -1);
+}
 
+value::Matrix * Manager::run(vpz::Vpz             *exp,
+                             utils::ModuleManager &modulemgr,
+                             uint32_t              thread,
+                             uint32_t              rank,
+                             uint32_t              world,
+                             Error                *error,
+                             int	           timeout)
 {
     value::Matrix *result = 0;
 
@@ -312,7 +322,8 @@ value::Matrix * Manager::run(vpz::Vpz             *exp,
         result = mPimpl->runManagerThread(exp, modulemgr, thread, rank,
                                           world, error, timeout);
     } else {
-        result = mPimpl->runManagerMono(exp, modulemgr, rank, world, error, timeout);
+        result = mPimpl->runManagerMono(exp, modulemgr, rank, world, error,
+                                        timeout);
     }
 
     mPimpl->writeSummaryLog(_("Manager ended"));

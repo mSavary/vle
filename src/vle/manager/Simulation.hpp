@@ -56,18 +56,18 @@ public:
 
     value::Map * run(vpz::Vpz                   *vpz,
                      const utils::ModuleManager &modulemgr,
-                     Error                      *error,
-                     int 		    		    *timeout);
-
-    value::Map * job(vpz::Vpz                   *vpz,
-                     const utils::ModuleManager &modulemgr,
                      Error                      *error);
+
+    value::Map * run(vpz::Vpz                   *vpz,
+                     const utils::ModuleManager &modulemgr,
+                     Error                      *error,
+                     int                         timeout);
 
 private:
     Simulation(const Simulation &other);
     Simulation& operator=(const Simulation &other);
+
     class Pimpl;
-    class Timeout;
     Pimpl *mPimpl;
 };
 
