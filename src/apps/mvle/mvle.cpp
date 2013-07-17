@@ -44,7 +44,7 @@ void mvle_show_help()
 {
     std::fprintf(stderr, _(
             "Use:\n"
-            "  mvle [-h,--help] [-v,--version] [-s|--show] [-P,--package"
+            "  mvle [-h,--help] [-t,--timeout time] [-v,--version] [-s|--show] [-P,--package"
             " package_name] vpz_files...\n"
             "\n"
             "Help options:\n"
@@ -53,7 +53,8 @@ void mvle_show_help()
             "Application options:\n"
             "  -s --show         Show the plan\n"
             "  -P --package      Start VLE in package mode\n"
-            "  -v --version      Show the version\n"));
+            "  -v --version      Show the version\n"
+            "  -t --timeout      Set Timeout in milliseconds"));
 }
 
 void mvle_show_version()
@@ -155,7 +156,7 @@ bool mvle_mpi_init(int *argc, char ***argv, uint32_t *rank, uint32_t *world)
 
     return result;
 }
-bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int *timeout,
+bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int timeout,
         vle::utils::Package& pack)
 {
     int i = 1;
@@ -175,9 +176,9 @@ bool mvle_parse_arg(int argc, char **argv, int *vpz, bool *show, int *timeout,
         } else if (std::strcmp(argv[i], "-s") == 0 or
                    std::strcmp(argv[i], "--show") == 0) {
             *show = true;
-        } else if (std::strcmp(argv[i], "--timeout") == 0 or
-		   std::strcmp(argv[i], "-t") == 0) {
-	  *timeout = atoi(argv[i+1]);
+        } else if ((std::strcmp(argv[i], "--timeout") == 0 or
+		   std::strcmp(argv[i], "-t") == 0) and i + 1 <= argc) {
+            timeout = atoi(argv[++i]);
         } else {
             *vpz = i;
         }
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
     uint32_t rank = 0;
     uint32_t world = 0;
     bool show = false;
-    int timeout = 0;
+    int timeout = 9000;
     bool result;
 
     vle::Init app;
@@ -240,7 +241,7 @@ int main(int argc, char **argv)
     if ((result = mvle_mpi_init(&argc, &argv, &rank, &world))) {
         int vpz;
         vle::utils::Package pack;
-        if ((result = mvle_parse_arg(argc, argv, &vpz, &show, &timeout, pack))) {
+        if ((result = mvle_parse_arg(argc, argv, &vpz, &show, timeout, pack))) {
             if (show) {
                 while (vpz < argc) {
                     mvle_show(
@@ -267,7 +268,7 @@ int main(int argc, char **argv)
                             rank,
                             world,
                             &error,
-                            &timeout);
+                            timeout);
                         if (error.code) {
                             mvle_print_error("Experimental frames `%s' throws error %s",
                                              argv[vpz], error.message.c_str());

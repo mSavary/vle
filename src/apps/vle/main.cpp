@@ -238,7 +238,7 @@ static vle::manager::LogOptions convert_log_mode()
 }
 
 static int run_manager(CmdArgs::const_iterator it, CmdArgs::const_iterator end,
-        int processor, vle::utils::Package& pkg, int& timeout)
+        int processor, vle::utils::Package& pkg, int timeout)
 {
     vle::manager::Manager man(convert_log_mode(),
                               vle::manager::SIMULATION_NONE |
@@ -256,7 +256,7 @@ static int run_manager(CmdArgs::const_iterator it, CmdArgs::const_iterator end,
                 						0,
                 						1,
                 						&error,
-                						&timeout);
+                						timeout);
 
         if (error.code) {
             std::cerr << vle::fmt(_("Experimental frames `%s' throws error %s"))
@@ -286,7 +286,7 @@ static int run_simulation(CmdArgs::const_iterator it,
         vle::value::Map *res = sim.run(new vle::vpz::Vpz(search_vpz(*it, pkg)),
                                        modules,
                                        &error,
-                                       &timeout);
+                                       timeout);
 
         if (error.code) {
             std::cerr << vle::fmt(_("Simulator `%s' throws error %s")) %
@@ -501,7 +501,7 @@ struct ProgramOptions
             bool *manager_mode, std::string *packagename,
             std::string *remotecmd, std::string *configvar, CmdArgs *args)
         : generic(_("Allowed options")), hidden(_("Hidden options")),
-        verbose(verbose), trace(trace), processor(processor), timeout(timeout),
+        verbose(verbose), trace(trace), processor(processor), timeout(*timeout),
         manager_mode(manager_mode), packagename(packagename),
         remotecmd(remotecmd), configvar(configvar), args(args)
     {
@@ -613,7 +613,7 @@ struct ProgramOptions
                 return PROGRAM_OPTIONS_CONFIG;
 
             if(vm.count("timeout"))
-            	*timeout = vm["timeout"].as < int >();
+            	timeout = vm["timeout"].as < int >();
         } catch (const std::exception &e) {
             std::cerr << e.what() << std::endl;
 
@@ -628,7 +628,7 @@ struct ProgramOptions
 
     po::options_description desc, generic, hidden;
     po::variables_map vm;
-    int *verbose, *trace, *processor, *timeout;
+    int *verbose, *trace, *processor, timeout;
     bool *manager_mode;
     std::string *packagename, *remotecmd, *configvar;
     CmdArgs *args;
